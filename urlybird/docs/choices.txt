@@ -1,0 +1,216 @@
+--------------------------------------------------------------------------------
+UrlyBird design decisions
+--------------------------------------------------------------------------------
+1. Overall design
+
+1.1. Packaging
+I decided to put the classes and interfaces in different packages dependent on 
+their function.
+	
+suncertify: 
+This is the parent package. This package only holds the main class UrlyBird, 
+including the main method to start the application.
+
+suncertify.db: 
+This package includes all classes and interfaces for the local database access. 
+In this package you find for example the "Data" class that is responsible for 
+reading and writing the database file. The business exceptions for the database
+access are also placed here.
+
+suncertify.gui:
+This package includes all classes that are responsible for the graphical user 
+interface. It holds all frames and panels and the GUI controller that handles 
+the communication between the user interface and the database access.
+
+suncertify.gui.utils:
+This package is for all utility classes that are useful for the graphical user 
+interface.
+
+suncertify.network:
+This package holds classes that are responsible for network access. The parent 
+package only holds the interface for the server. Any implementation of this 
+interface should be inserted in a subpackage of this package.
+
+suncertify.network.rmi:
+This is the package that holds the server implementation that works with RMI.
+
+suncertify.utils:
+This package holds the common utility classes, like the configuation class to 
+read and write configuration to a local file to hold settings between two runs 
+of the application.
+
+1.2. Logging
+Every logger is named by the full qualified class name of the class that is 
+using the logger. With this convention it is possible to get the root logger and
+set a global log level. This is done in a static block in the main class.
+Some logging output is printed to the graphic user interface. I decided to print 
+out only messages with log level INFO or higher.  
+
+2. Database details
+
+2.1. The find method
+I decided to use the startsWith method of the String class to fulfill the 
+requirements of the assignment, that "Fred" matches "Fred" or "Freddy".
+For the GUI I decided to use a drop down element to provide a filter for name 
+and/or location. I think this is the best solution to match the requirements of 
+an exact search.
+
+2.2. Extendability
+The data field size of the database file is read out dynamicaly by reading 
+header information, so it is easy to introduce more data fields. Also the 
+RecordsTableModel that represents the record entries in the GUI is dynamic. If 
+there will be an enhancement, the only part to edit is the RecordField enum of 
+the Record class that holds the name of the data fields that are shown in the 
+table.
+
+2.3. Facade pattern
+I use Facade pattern for the Data class, because it handles two different 
+logical parts. First is the access to the database itself and the other part is 
+the lock manager that handles the lock cookie mechanism for the record entries 
+editing and deleting. So I delegate the call to each of the logical parts 
+handler (DB, LockManager) inside the Facade.
+
+2.4. Primary key
+I decided that the data records have no primary key the user can see. As it is a 
+hotel room booking system, I think that one hotel can have two different rooms 
+with the same data in the database. Name, location, size, smoking, rate, date 
+and also owner can be the same for two or more records. With this fact it is not 
+possible to use any combination of data fields as a key. This can be also read 
+out of the specification of the update method: Every field of each record can be 
+updated without the need of throwing an DuplicateKeyException. As there is no 
+primary key the DuplicateKeyException is never be thrown out of the create 
+method although it is declared in the interface. The only key I use is technical 
+nature. It is the recNo. The recNo is the index of the record in the database 
+file.
+	
+2.5. Locking
+After every lock one should provide an unlock mechanism that is triggered 
+regardless of the resulting state that is reached after the lock. This unlock 
+must be provided to avoid deadlocks. Therefor I put the business code in a 
+try/finally block. The finally statement includes the unlock call to ensure that 
+no deadlock will happen if something went wrong after locking.
+For the locking of the database file I used a synchronized block with the file 
+as the object to synchronize with to ensure exclusive access to it.
+The position of the data in the database file is saved in a map that keeps the 
+file position for every record number. This map must also be synchronized. This 
+is done with a ReadWriteLock of the Java Concurrency package. This lock ensures 
+more performance because you can choose between read and write locks. A part 
+that is locked by a Read-Lock can also be visited by another reading thread 
+without blocking. 
+The locking implemented in the lock() and unlock() of the LockManager is 
+realized with classes of the java.util.concurrent package. 
+For locking a recNo an internal map is checked for the recNo as key. This map 
+holds all recNo's and lock cookies for the record that are locked. The recNo is 
+the key of the map and the lock cookie is the value. 
+So, if the key exists in the lock cookie map, then another client already has 
+the lock for this record and the requested client has to wait. This is done by 
+calling the await() method of the condition of a ReentrantLock instance. If the 
+recNo is not found as a key in the map then a new lock cookie is generated and 
+put into the lock cookie map with the recNo as the key.
+Unlocking a record is done by deleting the recNo/lock-cookie mapping out of the 
+lock cookie map and waking up a waiting thread with calling signal() on the 
+condition of the lock instance.
+
+2.6. Database access
+For common access to the database I created a DatabaseAccess interface. This 
+interface keeps all methods that are needed to read and write data. This 
+interface is implemented two times. One is the LocalDatabaseAccess that needs a 
+database file to be constructed. The other is the RMIDatabaseAccess to access 
+the database through RMI technology. This implementation is the remote database
+access to get data through RMI.
+
+2.7. Business model
+To abstract the data fields of a hotel room I created a model class named 
+Record. With this class the access to the record is much easier, because you do 
+not need any details of the fields in each database row. The class includes an 
+enum to hold the name and the index of any database field. 
+Each Record instance has also the recNo value that is used to identify the entry 
+in the database. See primary key section.
+
+2.8. Magic cookie
+The magic cookie of the delivered data file is "257" and I decided that this 
+value is checked every time I load a data file in the server or the standalone 
+client. If the magic cookie in the read file is not "257" (as in the delivered 
+data file of the assignment) then an IOException is thrown saying that the magic 
+cookie is not the one expected.  
+	
+3. Server implementation
+
+3.1. RMI vs. sockets
+The biggest point why I decided to use RMI as my network connection technique 
+is, that you don't need to implement any application protocol. The access to the 
+remote database behaves like the access to a local database. 
+Another point is that there is no need to care about multi-threading for the 
+server and it's clients, because RMI handles it for you. 
+The classes you	need to access remotely only need to extend UnicastRemoteObject 
+and implements the Remote interface. With this solution, also exception handling 
+is much easier - just throw it. In sockets solution you need to put exceptions 
+in a packet to send it via application protocol, because exceptions can't be 
+thrown through sockets.
+One last big point is, that that extending the database access interface is much 
+easier as in sockets solution where you need to extend the whole application 
+protocol.
+
+3.2. RMI Registrator
+The registrator is responsible for binding and unbinding the RMIDatabaseAccess 
+to the RMI registry. You can also get the remote client. All methods are 
+implemented as static methods, because the RMI registry is also accessed in 
+static ways. No instantiation of the RMIRegistrator is needed. Because of this I
+implemented the default constructor as private.
+
+3.2. RMI Database
+This RMIDatabaseAccess provides the methods to read and write data from and to 
+the remote database. The local implementation delegates all calls to the remote
+instance to a LocalDatabaseAccess. Because the RMI server binds one instance of
+the RMIDatabaseAccess there is also just one instance of the 
+LocalDatabaseAccess.
+
+4. GUI design
+
+4.1. MVC pattern
+I use MVC pattern in the GUI by delegating all business logic to a controller 
+named GuiController. This controller decouples the database or network calls 
+from GUI design. The GuiController has references to the local and remote 
+database access. The other direction is not provided. The business code does not
+have any references to a GUI element.
+	
+4.2. LayoutFrame
+As GUI design I decided to layout every frame in the same way using an abstract 
+"LayoutFrame" that includes the main layout of every frame extending this class.
+There are always three Panels in BorderLayout with a content panel in the north, 
+a button panel below the content and a status panel in the bottom to print out
+useful information to the user.
+
+4.3. Common client layout
+For the network client and the standalone client I use the same Frame class. 
+This avoids duplicate code. The two user interfaces are too equal. Just the 
+content panel is filled with different panels that are specific for remote or 
+for local access, while local access needs the database location definded and 
+remote access needs a hostname and a port to communicate.
+
+4.4. Owner field
+For the booking process the user needs to type the customer ID into a textfield, 
+mark a record in the table and click on the "book" button. I decided that this 
+customer ID is filled into the field "owner" of the selected record. So that 
+means, that every record that have an entry in his "owner" field is booked. 
+Actually there is no functionality to cancel the booking, because this is not 
+mentioned in the assignment. Once the owner field is set it cannot be changed 
+again. This fulfils the requirement, that a record is available for sale if the 
+"owner" field is all blanks.
+
+5. Common stuff
+
+5.1. Configuration
+I use the Singleton pattern for Configuration to ensure that only one instance 
+of the class reads and writes to the properties file. The configuation is 
+implemented with the standard Java Properties utility.
+
+5.2. Exceptions
+I used to implement all Exceptions as checked exceptions, so that any caller has 
+to catch and handle failures inside his code. I decided not to implement a new 
+class SecurityException because there already exists one with this name in the 
+java.lang package. This SecurityException is a RuntimeException. This fact suits
+to my needs, because the SecurityException is only thrown if the programmer does
+not code correctly. For example forgets to lock a record before updating it. 
+Programming failures should not be catched, so a RuntimeException is a good 
+choice.  

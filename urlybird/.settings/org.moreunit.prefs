@@ -1,0 +1,8 @@
+#Fri Aug 20 13:59:19 CEST 2010
+eclipse.preferences.version=1
+org.moreunit.flexiblenaming=true
+org.moreunit.prefixes=
+org.moreunit.suffixes=Test,ITest,DbTest
+org.moreunit.test_type=junit4
+org.moreunit.unitsourcefolder=urlybird\:code\:urlybird\:test
+org.moreunit.useprojectsettings=true

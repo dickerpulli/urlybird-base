@@ -1,0 +1,88 @@
+--------------------------------------------------------------------------------
+UrlyBird user guide
+--------------------------------------------------------------------------------
+1. Overview
+
+1.1. Requirements
+The UrlyBird Reservation System only require Java(TM) 2 Runtime Environment, 
+Standard Edition, Version 1.6.0 to be installed on your system. The System is 
+supported and tested under the Java Runtime Environment (JRE) for Windows.
+
+1.2. Network and Standalone version
+UrlyBird can be used either as local standalone client or as client-server 
+version. For the standalone client the database must be chosen by the user that 
+starts UrlyBird. The client-server version needs two instances of UrlyBird 
+running. One instance must be the server that needs the database file, and the 
+other instance must be the network client, that connects to the server. Client 
+and server must not necessarily run on the same machine - they only must be 
+connected to the same network.
+
+1.3. Starting the program
+UrlyBird is a Java program. The program is included in the Java archive file 
+"runme.jar". To start the program a Java runtime is needed. In command line you 
+have to enter text as follows: 
+
+java -jar runme.jar <mode>
+
+"mode" is an optional parameter. Possible paramaters are "alone" and 
+"server". The parameter "alone" starts the standalone client version of 
+UrlyBird. With "server" the server version will start. If no parameter is 
+given, the network client will start.   
+
+2. Server
+
+2.1. Server startup
+The server is only used to run UrlyBird in network mode. The window that appears 
+at startup has two options to set. The first option named "Database location" is 
+the absolute path of the database file. For easy search of the database file you 
+can click on "Browse" to browse the local system to search for the file to use. 
+The second option named "Local server port" is the port number the server should 
+use. The server port must be numeric and between 0 and 65535. Both options are 
+required. To start the server click on "Start". If the startup was successful 
+the "Start" button will be disabled and the "Stop" button will be enabled. To 
+stop the running server click on "Stop". 
+
+3. Client
+
+3.1. Standalone client startup
+The standalone client is used to run UrlyBird in local mode. No network and no 
+server instance is necessary. The window that appears at startup has only one 
+option to set. This option named "Database location" is the absolute path of the 
+database file. This option is required. For easy search of the database file you 
+can click on "Browse" to browse the local system to search for the file to use. 
+After choosing the database file you have to click on "Connect" to connect to 
+this database. 
+
+3.2. Network client startup
+The network client is used to run UrlyBird in network mode. It is necessary that 
+a server instance is running somewhere in the network. The window that appears 
+at startup has two options to set. The first option named "Server hostname or 
+IP" is the server location. You can fill in either the hostname like 
+"somewhere.net" or an IP address like "10.0.0.1". The secord option is the 
+server's port number. Both options are required. To connect to the server click 
+on "Connect".  
+
+3.3. Client
+Both, standalone and network client have a second window that appears after the 
+connection to the database established. This window is the business user 
+interface. In this window you can perform searches in the database or book hotel 
+rooms.
+The search form has two combo boxes. One of them holds all possible names of the 
+hotels, the other one holds all possible locations of the hotels in the 
+database. There special entries called "- all -". With this selection you can 
+search for all names and/or all locations that are possible.
+Once you have found the hotel room you searched for you can perform a booking 
+for the customer. To do this, you need to type the customer ID into the 
+textfield that is provided for this ID. Now you have to select the hotel room 
+inside the table. After selecting the room you need to click on the "Book 
+selected record" button. The customers ID is filled into the owner field of the 
+hotel room in the table and marks the room as "booked up". Once you have booked 
+a record for a customer the record is in a final state. There is no possibility 
+to sell this hotel room to another customer.
+
+4. Common
+
+4.1. Configuration
+All inputs, like hostname or file locations are stored persistently to a file in 
+the application path when the application is shut down. This ensures that you do 
+not have to enter the same things if you start UrlyBird another time.
